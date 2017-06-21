@@ -424,7 +424,7 @@ auto bind_w_unsubscribe(const std::shared_ptr<Obj>& obj, Closure&& closure, cons
 ----
 # Compiler support
 
-Library should compiles with any standart compatible c++14/17 compiler.  
+Library should compiles with any standard compatible c++14/17 compiler.  
 Tested with clang, gcc 6.3, vs 2017 c++
 
 ## VS2015-2017 , GCC < 7 
