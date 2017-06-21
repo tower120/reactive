@@ -350,7 +350,7 @@ y = 200;
 // unsubscribed, trigger nothing
 ```
 
-observe/observe_w_unsubscribe have optional `blocking_mode` template parameter:
+`observe`/`observe_w_unsubscribe` have optional `blocking_mode` template parameter:
 ```C++
 template<class blocking_mode = default_blocking, class Closure, class ...Observables>
 auto observe(Closure&&, Observables&...)
@@ -365,7 +365,7 @@ Rules for default_blocking same as in [ObservableProperty](#observableproperty).
 # Bind
 
 `bind` designed for non-intrusive binding ObservableProperties/ReactivePropeties to non-aware class.
-class must be in `std::shared_ptr`. `bind` take care of observables and object lifetimes.  
+Class must be in `std::shared_ptr`. `bind` take care of observables and object lifetimes.  
 
 ```C++
 using namespace reactive;
@@ -401,7 +401,7 @@ len = 101;
 len = 60;
 ```
 
-Store object's weak_ptr, listen for observables. If object dies, unsubscribe self.
+Stores object's weak_ptr, listen for observables. If object dies, unsubscribe self.
 
 #### Synopsis
 ```C++
@@ -424,4 +424,4 @@ auto bind_w_unsubscribe(const std::shared_ptr<Obj>& obj, Closure&& closure, cons
 Objects in ObservableProperty, ReactiveProperty must be, also, no-throw default constructable in order to work in nonblocking_atomic mode
 https://developercommunity.visualstudio.com/content/problem/69560/stdatomic-load-does-not-work-with-non-default-cons.html
 
-in default_blocking mode trivially constructable objects, but without no-throw default constructor, will work in nonblocking mode.
+in default_blocking mode, trivially constructable objects, but without no-throw default constructor, will work in nonblocking mode.
