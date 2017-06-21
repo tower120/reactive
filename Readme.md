@@ -27,7 +27,7 @@ struct MyWidget{
         cout << msg << endl;
     }
 };
-auto widget = std::make_shared<MyWidget>();     // need shared_ptr to keep track about widget alivness in multithreaded environment
+auto widget = std::make_shared<MyWidget>();     // need shared_ptr to keep track about widget aliveness in multithreaded environment
 
 // non-intrusive bind
 bind(widget, [](auto& widget, int sum, int x, int y){
@@ -212,7 +212,11 @@ Where `blocking_mode` can be:
  * `nonblocking` Will use `SpinLock`. ReadLock will copy value, and will not block at all. WriteLock will hold unique_lock. Setting new value will make temporary value copy and will not block.
  * `nonblocking_atomic` T will be wrapped with `std::atomic`. There will be no other locks. ReadLock will copy value, and will not block at all. WriteLock will hold temporary value, ObservableProperty's value will be set to temporary value on WriteLock destruction. Setting new value will make temporary value copy and will not block.
 
+ All in all, `blocking` never copy value, but lock internal mutex each time when you work with it.
+
  Thoeretically, hardware supported std::atomic<T> with nonblocking_atomic should be the fastest. Keep in mind, that mostly, atomics are lockless for sizeof(T) <= 8.
+
+ You rather will not need anything, but default.
 
 
 #### Implementation details:
@@ -356,8 +360,8 @@ template<class blocking_mode = default_blocking, class Closure, class ...Observa
 auto observe(Closure&&, Observables&...)
 ```
 
-If blocking_mode == blocking, closure called with observables.getCopy()... If someone of observables dies, `observe` auto-unsubscribes.  
-Otherwise, values stored in local tuple, and each time observables changes, tuple updates. Closure called with copy of that tuple. Thus, ommiting potential mutex lock on observables.getCopy()... If someone of observables dies, closure will be called with last known value of dead observable. Thus, it stop listen only when all observables dies.
+If blocking_mode == blocking, closure called with observables.lock()... If someone of observables dies, `observe` auto-unsubscribes.  
+Otherwise, values stored in local tuple, and each time observables changes, tuple updates. Closure called with copy of that tuple. Thus, ommiting potential mutex lock on observables.lock()... If someone of observables dies, closure will be called with last known value of dead observable. Thus, it stop listen only when all observables dies.
 
 Rules for default_blocking same as in [ObservableProperty](#observableproperty).
 
@@ -419,6 +423,9 @@ auto bind_w_unsubscribe(const std::shared_ptr<Obj>& obj, Closure&& closure, cons
 
 ----
 # Compiler support
+
+Library should compiles with any standart compatible c++14/17 compiler.  
+Tested with clang, gcc 6.3, vs 2017 c++
 
 ## VS2015-2017 , GCC < 7 
 Objects in ObservableProperty, ReactiveProperty must be, also, no-throw default constructable in order to work in nonblocking_atomic mode
