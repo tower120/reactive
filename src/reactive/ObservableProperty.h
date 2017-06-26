@@ -103,6 +103,10 @@ namespace reactive{
             return ptr->getCopy();
         }
 
+        T* operator->(){
+            return &(ptr->value);
+        }
+
         void pulse() const{
             ptr->pulse();
         }

@@ -4,6 +4,7 @@
 #include "threading/upgrade_mutex.h"
 #include "Event.h"
 
+#include "ObservablePropertyFromThisBase.h"
 #include "../blocking.h"
 
 namespace reactive {
@@ -89,8 +90,29 @@ namespace details {
 		std::conditional_t<atomic_value, std::atomic<T>, T> value;
 		mutable Event<const T&> event;
 
+	private:
+		static constexpr const bool is_ObservablePropertyFromThis = std::is_base_of<ObservablePropertyFromThisBase, T>::value;
+
+		void do_init_ObservablePropertyFromThis(std::true_type is_atomic) {
+			T v = value;
+			set_ObservablePropertyFromThis_ptr(v, this);
+			value = v;
+		}
+		void do_init_ObservablePropertyFromThis(std::false_type is_atomic) {
+			set_ObservablePropertyFromThis_ptr(value, this);
+		}
+		void init_ObservablePropertyFromThis(std::true_type is_ObservablePropertyFromThis) {
+			do_init_ObservablePropertyFromThis(std::integral_constant<bool, atomic_value >{});
+		}
+		void init_ObservablePropertyFromThis(std::false_type is_ObservablePropertyFromThis) {}
+		void init_ObservablePropertyFromThis() {
+			init_ObservablePropertyFromThis(std::integral_constant<bool, is_ObservablePropertyFromThis>{});
+		}
+
 	public:
-		ObservableProperty() {}
+		ObservableProperty() {
+			init_ObservablePropertyFromThis();
+		}
 
 		// in place construction
 		template<
@@ -98,7 +120,9 @@ namespace details {
 			, class = typename std::enable_if_t< !atomic_value && !std::is_same< std::decay_t<Arg>, Self >::value >
 		>
 		ObservableProperty(Arg&& arg, Args&&...args)
-			: value( std::forward<Arg>(arg), std::forward<Args>(args)... ) {};
+			: value( std::forward<Arg>(arg), std::forward<Args>(args)... ) {
+			init_ObservablePropertyFromThis();
+		};
 
 		// for atomic
 		template<
@@ -107,19 +131,25 @@ namespace details {
 			, typename = void
 		>
 		ObservableProperty(Arg&& arg, Args&&...args)
-			: value( T(std::forward<Arg>(arg), std::forward<Args>(args)...) ) {};
+			: value( T(std::forward<Arg>(arg), std::forward<Args>(args)...) ) {
+			init_ObservablePropertyFromThis();
+		};
 
 
 		// do not copy event list
 		ObservableProperty(const ObservableProperty& other)
-			:value(other.getCopy()) {}
+			:value(other.getCopy()) {
+			init_ObservablePropertyFromThis();
+		}
 		ObservableProperty& operator=(const ObservableProperty& other) {
 			set_value(other.getCopy());
+			init_ObservablePropertyFromThis();
 			return *this;
 		}
 
 		// move all (event list too)
 		// non thread safe
+		// will not be called
 		ObservableProperty(ObservableProperty&&) = default;
 		ObservableProperty& operator=(ObservableProperty&&) = default;
 

@@ -8,14 +8,18 @@
 #include "TestBindableProperty.h"
 #include "TestReactiveProperty.h"
 #include "TestMultiObserver.h"
+#include "TestObservablePropertyFromThis.h"
 
 
 #include "BenchmarkOwnedProperty.h"
 
 
 int main() {
+
+    TestObservablePropertyFromThis().test_all();
+
     //TestEvent().test_all();
-    TestObservableProperty().test_all();
+    //TestObservableProperty().test_all();
 	/*TestMultiObserver().test_all();
 	TestReactiveProperty().test_all();
 
