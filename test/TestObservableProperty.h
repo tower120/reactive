@@ -118,13 +118,32 @@ public:
         auto pos2 = pos1;
         {
             auto pos2_ptr = pos2.lock();
-            std::cout << "pos2 = "
+            std::cout << "Now pos2 = "
                     << pos2_ptr->x  << ","
                     << pos2_ptr->y
                     << std::endl;
         }
 
         pos1 = Pos{3,4};
+
+        pos2 += [](const Pos& len){
+            std::cout << "pos2 = " << len.x << "," << len.y << std::endl;
+        };
+        pos2 = pos1;
+    }
+
+    void test_silent(){
+        reactive::ObservableProperty<int> i1{1};
+        i1 += [](int i){
+            std::cout << i << std::endl;
+        };
+
+        {
+            auto i_ptr = i1.write_lock();
+            i_ptr.silent();
+
+            *i_ptr = 15;
+        }
     }
 
     void test_size(){
@@ -153,11 +172,12 @@ public:
 
     void test_all(){
         //test_simple();
-		test_unsubscribe();
+		//test_unsubscribe();
 		//test_in_thread();
         //test_read_lock();
         //test_write_lock();
         //test_copy();
+        test_silent();
 
         //test_size();
     }

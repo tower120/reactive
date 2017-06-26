@@ -114,7 +114,7 @@ namespace details {
 		ObservableProperty(const ObservableProperty& other)
 			:value(other.getCopy()) {}
 		ObservableProperty& operator=(const ObservableProperty& other) {
-			value = other.getCopy();
+			set_value(other.getCopy());
 			return *this;
 		}
 
@@ -284,8 +284,17 @@ namespace details {
 		using ReadLock = std::conditional_t<do_blocking, ReadLockNonCopy, ReadLockAtomic>;
 
 
+		class WriteLockBase{
+		protected:
+			bool m_silent = false;
 
-		class WriteLockNonCopy{
+		public:
+			void silent(bool be_silent = true){
+				m_silent = be_silent;
+			}
+		};
+
+		class WriteLockNonCopy : public WriteLockBase{
 			friend Self;
 		protected:
 			Self* self;
@@ -345,6 +354,7 @@ namespace details {
 				self->event(temp_value);
 			}
 			void finish() {
+				if (this->m_silent) return;
 				finish(std::integral_constant<bool, do_blocking>{});
 			}
 		public:
@@ -356,7 +366,7 @@ namespace details {
 
 
 		// lockless
-		class WriteLockAtomic {
+		class WriteLockAtomic  : public WriteLockBase{
 			friend Self;
 		protected:
 			Self* self;
@@ -408,6 +418,9 @@ namespace details {
 		private:
 			void finish() {
 				self->value = value;
+
+				if (this->m_silent) return;
+
 				self->event(value);
 			}
 		public:
@@ -434,14 +447,17 @@ namespace details {
 			return {*this};
 		}
 
+	private:
+		void do_pulse(std::true_type do_blocking) const {
+			std::shared_lock<Lock> sl(m_lock);
+			event(this->value);
+		}
+		void do_pulse(std::false_type do_blocking) const {
+			event(getCopy());
+		}
+	public:
 		void pulse() const{
-			if (do_blocking) {
-				std::shared_lock<Lock> sl(m_lock);
-				event(this->value);
-			}
-			else {
-				event(getCopy());
-			}
+			do_pulse(std::integral_constant<bool, do_blocking>{});
 		}
 
 	};

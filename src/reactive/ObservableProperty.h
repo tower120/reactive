@@ -10,7 +10,7 @@ namespace reactive{
     class ObservableProperty{
         using Self = ObservableProperty<T, blocking_class>;
 
-        using Property = details::ObservableProperty<T, blocking_class>;
+        using Property = details::ObservableProperty<T, blocking_class, Self>;
         std::shared_ptr<Property> ptr;
     public:
 		using Value = T;
@@ -52,7 +52,7 @@ namespace reactive{
         ObservableProperty(const ObservableProperty& other)
             :ptr(std::make_shared<Property>(other.getCopy())) {}
         ObservableProperty& operator=(const ObservableProperty& other) {
-            ptr = std::make_shared<Property>(other.getCopy());
+            *ptr = *(other.ptr);
             return *this;
         }
 

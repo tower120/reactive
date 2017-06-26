@@ -10,6 +10,10 @@ Helpers [observe](#observe) and [bind](#bind)
 Add `src` folder to your compiler's INCLUDE path.
 
 ```C++
+#include <reactive/ObservableProperty>
+#include <reactive/ReactiveProperty>
+#include <reactive/bind>
+
 using namespace reactive;
 
 ObservableProperty<int> x = 1;
@@ -41,6 +45,8 @@ y = 20;
 ```
 
 # Event
+
+Event is basis of reactivity. It let us know that something changed.
 
 ```C++
 #include <reactive/Event.h>
@@ -188,6 +194,7 @@ mutators
 `WriteLock write_lock()`  
 `void operator=(const T& value)`  
 `void operator=(T&& value)`  
+`ObservableProperty& operator=(const ObservableProperty&)` will copy only value 
 
 
 `lock()`/`write_lock()` lock object(with mutex, if applicable, see below), and provides pointer like object access. `WriteLock` will trigger event on destruction (aka update).
@@ -198,6 +205,7 @@ mutators
 `T* operator->()`  
 `T& operator*()`  
 `void unlock()` unlocks underlying mutex(if applicable) and call event loop with new value(for `WriteLock`)  
+`void silent(bool be_silent = true)` does not call event on WriteLock destruction
 
 `ObservableProperty` may be configured with additional parameter `ObservableProperty<T, blocking_mode>`.
 
@@ -208,21 +216,25 @@ Where `blocking_mode` can be:
    if (T is copyable && size <= 128) nonblocking
    else blocking
 ```
- * `blocking` Will use `upgrade_mutex`. ReadLock will hold shared_lock. WriteLock will hold unique_lock. Setting new value will block with shared_lock until event not finish queue.
- * `nonblocking` Will use `SpinLock`. ReadLock will copy value, and will not block at all. WriteLock will hold unique_lock. Setting new value will make temporary value copy and will not block.
- * `nonblocking_atomic` T will be wrapped with `std::atomic`. There will be no other locks. ReadLock will copy value, and will not block at all. WriteLock will hold temporary value, ObservableProperty's value will be set to temporary value on WriteLock destruction. Setting new value will make temporary value copy and will not block.
-
- All in all, `blocking` never copy value, but lock internal mutex each time when you work with it.
+ * `blocking` use `upgrade_mutex`. ReadLock use shared_lock. WriteLock use unique_lock. On setting new value, mutex locks with shared_lock, event called with value reference.
+ * `nonblocking` use `SpinLock`. ReadLock copy value, does not use lock. WriteLock use unique_lock. On setting new value, event called with value copy (no locks).
+ * `nonblocking_atomic` use `std::atomic<T>`. ReadLock copy value, does not use lock. WriteLock work with value copy, then atomically update property's value with it. On setting new value, event called with value copy (no locks).
+ 
+ All in all, `blocking` never copy value, but lock internal mutex each time when you work with it. For small objects it is faster to copy, than lock, that's why `blocking` not used as default.
 
  Thoeretically, hardware supported std::atomic<T> with nonblocking_atomic should be the fastest. Keep in mind, that mostly, atomics are lockless for sizeof(T) <= 8.
 
- You rather will not need anything, but default.
+Most of the time you will be happy with default. But, for containers, blocking mode preferable:
+ ```C++
+ObservableProperty< std::vector<int>, blocking >
+```
+Because all other modes, will make temporary copy of the vector.
 
 
 #### Implementation details:
 ObservableProperty internally holds shared_ptr. This needed to track alivness(and postpone destruction) in multithreaded environment.
 
-Observable property consists from value and event. Event anyway internally holds queue of observers, in heap allocated memory (std::vector). So shared_ptr allocation overhead is not that big.
+Observable property consists from value and event. Event internally holds queue of observers, in heap allocated memory (std::vector) anyway. So shared_ptr construction overhead is not that big.
 
 ```C++
 template<class T> struct ObservableProperty{
@@ -315,7 +327,7 @@ struct ReactiveProperty{
 
 
 # Observe
-
+Allow observe multiple properties.
 ```C++
 using namespace reactive;
 
@@ -360,7 +372,7 @@ template<class blocking_mode = default_blocking, class Closure, class ...Observa
 auto observe(Closure&&, Observables&...)
 ```
 
-If blocking_mode == blocking, closure called with observables.lock()... If someone of observables dies, `observe` auto-unsubscribes.  
+If blocking_mode == blocking, closure called with observables.lock()... If someone of observables dies, `observe` auto-unsubscribes.    
 Otherwise, values stored in local tuple, and each time observables changes, tuple updates. Closure called with copy of that tuple. Thus, ommiting potential mutex lock on observables.lock()... If someone of observables dies, closure will be called with last known value of dead observable. Thus, it stop listen only when all observables dies.
 
 Rules for default_blocking same as in [ObservableProperty](#observableproperty).
@@ -393,6 +405,11 @@ public:
 std::shared_ptr<Box> box = std::make_shared<Box>();
 
 len = 40;
+
+bind(box, [](auto box, int len) {
+    box->len(len);
+    box->show();
+}, len);
 
 bind_w_unsubscribe(box, [](auto unsubscibe, auto box, int len) {
     if (len > 100) unsubscibe();
