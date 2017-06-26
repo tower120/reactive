@@ -1,5 +1,5 @@
+// flag for VS2017 c++ compiler
 #define _ENABLE_ATOMIC_ALIGNMENT_FIX
-
 
 #include <iostream>
 
