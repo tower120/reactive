@@ -170,34 +170,35 @@ If possible, on set, new value compares with previous, and event triggers only i
  
 
 #### `reactive/ObservableProperty.h` Synopsis
-constructors  
+**constructors**  
 `ObservableProperty(Args&&...)`  in place object construct  
 `ObservableProperty(const ObservableProperty&)` will copy only value  
 `ObservableProperty(ObservableProperty&&)`  
 `ObservableProperty(const WeakPtr&)`  may be invalid after construction. Check with bool()  
 `ObservableProperty(const SharedPtr&)`  
-pointer  
+**pointer**  
 `WeakPtr weak_ptr() const`  
 `const SharedPtr& shared_ptr() const`  
 `operator bool() const`  
-event manipulation  
+**event manipulation**  
 `void operator+=(Closure&&) const`  
 `void operator+=(const Delegate&) const`  
 `void operator-=(const Delegate&) const`  
 `void operator-=(const DelegateTag&) const`  
 `void subscribe(const DelegateTag&, Closure&&) const`  
 `void pulse() const`  
-accessors  
+**accessors**  
 `ReadLock lock() const`  
 `T getCopy() const`  
-mutators  
+**mutators**  
 `WriteLock write_lock()`  
 `void operator=(const T& value)`  
 `void operator=(T&& value)`  
 `ObservableProperty& operator=(const ObservableProperty&)` will copy only value 
 
-
-`lock()`/`write_lock()` lock object(with mutex, if applicable, see below), and provides pointer like object access. `WriteLock` will trigger event on destruction (aka update).
+---
+> `lock()`/`write_lock()` lock object(with mutex, if applicable, see below), and provides pointer like object access. `WriteLock` will trigger event on destruction (aka update).
+---
 
 `ReadLock`/`WriteLock` Synopsis (`ReadLock` with `const` modifier):  
 `T& get()`  
