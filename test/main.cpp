@@ -1,5 +1,5 @@
+// flag for VS2017 c++ compiler
 #define _ENABLE_ATOMIC_ALIGNMENT_FIX
-
 
 #include <iostream>
 
@@ -14,16 +14,16 @@
 
 
 int main() {
-    //TestEvent().test_all();
+    TestEvent().test_all();
     TestObservableProperty().test_all();
-	/*TestMultiObserver().test_all();
+	TestMultiObserver().test_all();
 	TestReactiveProperty().test_all();
 
     TestBindableProperty().test_all();
 
 
 
-	BenchmarkOwnedProperty().benchmark_all();*/
+	BenchmarkOwnedProperty().benchmark_all();
 
     return 0;
 }

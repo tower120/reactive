@@ -11,7 +11,7 @@
 #include "Delegate.h"
 
 #include "threading/SpinLock.h"
-#include "utils/DefferedForwardKeyContainer.h"
+#include "utils/DeferredForwardKeyContainer.h"
 
 namespace reactive {
 namespace details {
@@ -69,45 +69,11 @@ namespace details {
 	};
 
 
-	/*
-	template<
-		class ActionListLock,
-		class ListMutationLock,
-		class ...Args>
-	class ConfigurableEventWithAction 
-		: public ConfigurableEventBase<ActionListLock, ListMutationLock, Args...>
-	{
-		using Base = ConfigurableEventBase<ActionListLock, ListMutationLock, Args...>;
-		using Action = std::function<void()>;
-
-		using Base::list;
-	public:
-		using Base::operator+=;
-		using Base::operator-=;
-		using Base::subscribe;
-
-		void subscribe(Action& action) {
-			list.emplace(&action, [action](auto&&...){ action(); });
-		}
-		void operator+=(Action& action) {
-			subscribe(action);
-		}
-		void operator-=(const Action& action) {
-			list.remove(static_cast<const void*>(&action));
-		}
-	};
-	*/
-
 	template<
 		class ActionListLock /*= threading::SpinLock<threading::SpinLockMode::Adpative>*/,
 		class ListMutationLock /*= std::shared_mutex*/,
 		class ...Args>
-	using ConfigurableEvent = ConfigurableEventBase<ActionListLock, ListMutationLock, Args...>
-		/*std::conditional_t<
-		sizeof...(Args) == 0
-		, ConfigurableEventBase<ActionListLock, ListMutationLock, Args...>
-		, ConfigurableEventWithAction<ActionListLock, ListMutationLock, Args...>
-	>*/;
+	using ConfigurableEvent = ConfigurableEventBase<ActionListLock, ListMutationLock, Args...>;
 
 
 	template<class ...Args>

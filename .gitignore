@@ -3,3 +3,8 @@
 #################
 .idea
 cmake-build-debug
+
+#################
+## Visual Studio
+#################
+.vs

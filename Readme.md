@@ -92,7 +92,7 @@ mouseMove(10,6);
 `void subscribe(const DelegateTag&, Closure&&)`  
 
 #### Implementation details:
-Event use "deferred" container (see `details/utils/DefferedForwardContainer.h`), erase/emplace queued in separate std::vector, and applied before foreach(). Thus, foreach() have minimal interference with container modification. 
+Event use "deferred" container (see `details/utils/DeferredForwardContainer.h`), erase/emplace queued in separate std::vector, and applied before foreach(). Thus, foreach() have minimal interference with container modification. 
 
 * subscription/unsubscription occurs before next event() call. 
 * Subscription/unsubscription never blocked by event call();
