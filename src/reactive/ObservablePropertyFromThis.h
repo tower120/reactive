@@ -8,15 +8,20 @@
 
 namespace reactive {
 
+	// always in blocking mode
 	template<class Derived>
 	class ObservablePropertyFromThis : public details::ObservablePropertyFromThisBase {
-		using Property = details::ObservableProperty<Derived>;
+	private:
+		using Property = details::ObservableProperty<Derived, blocking>;
 
 	protected:
-		Property* property_from_this() {
+		// write_lock()
+
+		auto* property_from_this() {
+			using Property = details::ObservableProperty<Derived>;
 			return static_cast<Property*>(property_ptr);
 		}
-		const Property* property_from_this() const {
+		const auto* property_from_this() const {
 			return static_cast<const Property*>(property_ptr);
 		}
 

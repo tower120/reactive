@@ -10,23 +10,25 @@
 struct TestObservablePropertyFromThis{
     void test_1(){
         class Box : public reactive::ObservablePropertyFromThis<Box>{
-            int m_progress = 0;
-
-        public:
+			int m_progress = 0;
+		public:
             int progress() const{
                 return m_progress;
             }
 
-            std::future<void> load(){
+			void reset_progress() {
+				auto lock = property_from_this()->write_lock();
+				m_progress = 0;
+			}
+
+            auto load(){
                 return std::async(std::launch::async, [&](){
-                    while(m_progress < 1) {
-                        std::cout << "Iterate" << std::endl;
+                    while(m_progress < 100) {
                         {
                             auto lock = property_from_this()->write_lock();
                             m_progress++;
                         }
-                        std::cout << "Iterate2" << std::endl;
-                        std::this_thread::sleep_for(std::chrono::seconds(1));
+                        std::this_thread::sleep_for(std::chrono::milliseconds(100));
                     }
                 });
             }
@@ -37,13 +39,16 @@ struct TestObservablePropertyFromThis{
             }
         };
 
-        reactive::ObservableProperty<Box, reactive::nonblocking> box;
-        /*box += [](const Box& box){
-            std::cout << "Change " << std::endl;
-            //box.showProgress();
-        };*/
-        std::cout << "load" << std::endl;
-        box->load()/*.get()*/;
+        reactive::ObservableProperty<Box> box;
+
+        box += [](const Box& box){
+			if (box.progress() % 10 != 0) {
+				return;
+			}
+            box.showProgress();
+			// box.schedule()
+        };
+        box->load().get();
 
         std::cout << "End" << std::endl;
     }

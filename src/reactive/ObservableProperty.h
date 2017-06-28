@@ -10,7 +10,7 @@ namespace reactive{
     class ObservableProperty{
         using Self = ObservableProperty<T, blocking_class>;
 
-        using Property = details::ObservableProperty<T, blocking_class, Self>;
+        using Property = details::ObservableProperty<T, blocking_class>;
         std::shared_ptr<Property> ptr;
     public:
 		using Value = T;

@@ -10,7 +10,7 @@ namespace reactive{
     class ReactiveProperty{
         using Self = ReactiveProperty<T, blocking_class>;
 
-		using DataBase = details::ObservableProperty<T, blocking_class, Self>;
+		using DataBase = details::ObservableProperty<T, blocking_class>;
 
 		struct DataNoLock {
 			using Lock = typename DataBase::Lock;

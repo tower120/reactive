@@ -8,6 +8,12 @@
 #include "../blocking.h"
 
 namespace reactive {
+	// forward declaration 
+	template<class, class>
+	class ReactiveProperty;
+	template<class, class>
+	class ObservableProperty;
+
 namespace details {
 
 	// equality from #https://stackoverflow.com/a/36360646
@@ -29,9 +35,16 @@ namespace details {
 		// #https://developercommunity.visualstudio.com/content/problem/69605/vs2017-c-empty-base-optimization-does-not-work-wit.html
 		template<class T, class blocking_class>
 		struct Settings {
-			using blocking_mode = get_blocking_mode<blocking_class, T>;
+			static constexpr const bool is_ObservablePropertyFromThis = std::is_base_of<ObservablePropertyFromThisBase, T>::value;
 
-			static const constexpr bool do_blocking = std::is_same<blocking_mode, blocking>::value;
+			using blocking_mode = get_blocking_mode<
+				std::conditional_t<is_ObservablePropertyFromThis, blocking, blocking_class>
+				, T>;
+			/*using blocking_mode = get_blocking_mode<
+				 blocking_class
+				, T>;*/
+
+			static const constexpr bool do_blocking  = std::is_same<blocking_mode, blocking>::value;
 			static const constexpr bool atomic_value = std::is_same<blocking_mode, nonblocking_atomic>::value;
 
 			using Lock = std::conditional_t<do_blocking
@@ -62,12 +75,14 @@ namespace details {
 	// thread-safe
 	// reactive::nonblocking =  value will be copied twice on set
 	//                          safe to change value right from the observer (may cause infinite loop)
-	template<class T, class blocking_class = reactive::default_blocking, class friend_class = std::true_type>
+	template<class T, class blocking_class = reactive::default_blocking>
 	class ObservableProperty 
 		: public details::ObservablePropertyLock< typename details::Settings<T, blocking_class>::Lock >
 	{
-		friend friend_class;
-		using Self = ObservableProperty<T, blocking_class, friend_class>;
+		friend reactive::ReactiveProperty<T, blocking_class>;
+		friend reactive::ObservableProperty<T, blocking_class>;
+			
+		using Self = ObservableProperty<T, blocking_class>;
 
 
 		using Settings = details::Settings<T, blocking_class>;
@@ -76,7 +91,8 @@ namespace details {
 	public:
 		using blocking_mode = typename Settings::blocking_mode;
 	protected:
-		static const constexpr bool do_blocking = Settings::do_blocking;
+		static constexpr const bool is_ObservablePropertyFromThis = Settings::is_ObservablePropertyFromThis;
+		static const constexpr bool do_blocking  = Settings::do_blocking;
 		static const constexpr bool atomic_value = Settings::atomic_value;
 		using Lock = typename Settings::Lock;
 
@@ -91,7 +107,6 @@ namespace details {
 		mutable Event<const T&> event;
 
 	private:
-		static constexpr const bool is_ObservablePropertyFromThis = std::is_base_of<ObservablePropertyFromThisBase, T>::value;
 
 		void do_init_ObservablePropertyFromThis(std::true_type is_atomic) {
 			T v = value;
