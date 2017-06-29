@@ -59,9 +59,24 @@ public:
 
 
 	struct Data2 {
-		reactive::ObservableProperty<int, reactive::nonblocking_atomic> x1, x2, x3, x4;
+		reactive::ObservableProperty<int, reactive::blocking> x1, x2, x3, x4;
 
 		Data2(int i1, int i2, int i3, int i4)
+			: x1(i1)
+			, x2(i2)
+			, x3(i3)
+			, x4(i4)
+		{}
+
+		int sum() {
+			return x1.getCopy() + x2.getCopy() + x3.getCopy() + x4.getCopy();
+		}
+	};
+
+	struct Data3 {
+		reactive::ObservableProperty<int, reactive::default_blocking, false> x1, x2, x3, x4;
+
+		Data3(int i1, int i2, int i3, int i4)
 			: x1(i1)
 			, x2(i2)
 			, x3(i3)
@@ -140,10 +155,12 @@ public:
 		}
 	}
 
+
+	template<class D = Data2>
 	void benchmark_properties() {
 		using namespace std::chrono;
 
-		std::vector< Data2 > list;
+		std::vector< D > list;
 		list.reserve(count);
 		{
 			high_resolution_clock::time_point t1 = high_resolution_clock::now();
@@ -182,7 +199,11 @@ public:
 		std::cout << std::endl;
 
 		std::cout << "Properties" << std::endl;
-		benchmark_properties();
+		benchmark_properties<Data2>();
+		std::cout << std::endl;
+
+		std::cout << "no threaded Properties" << std::endl;
+		benchmark_properties<Data3>();
 		std::cout << std::endl;
 	}
 };

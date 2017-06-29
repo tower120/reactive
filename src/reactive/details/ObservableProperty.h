@@ -30,7 +30,7 @@ namespace details {
 		struct Settings {
 			using blocking_mode = get_blocking_mode<blocking_class, T>;
 
-			static const constexpr bool do_blocking = std::is_same<blocking_mode, blocking>::value;
+			static const constexpr bool do_blocking  = std::is_same<blocking_mode, blocking>::value;
 			static const constexpr bool atomic_value = std::is_same<blocking_mode, nonblocking_atomic>::value;
 
 			using Lock = std::conditional_t<do_blocking
@@ -61,23 +61,33 @@ namespace details {
 	// thread-safe
 	// reactive::nonblocking =  value will be copied twice on set
 	//                          safe to change value right from the observer (may cause infinite loop)
-	template<class T, class blocking_class = reactive::default_blocking, class friend_class = std::true_type>
-	class ObservableProperty 
-		: public details::ObservablePropertyLock< typename details::Settings<T, blocking_class>::Lock >
+	template<class T, class blocking_class = reactive::default_blocking, class friend_class = std::true_type
+		, class ObservablePropertyLock_mutex = typename details::Settings<T, blocking_class>::Lock
+		, class EvenActionListLock = threading::SpinLock<threading::SpinLockMode::Yield>
+		, class EventMutationListLock = std::shared_mutex
+	>
+	class ObservablePropertyConfigurable
+		: public details::ObservablePropertyLock< ObservablePropertyLock_mutex >
 	{
 		friend friend_class;
-		using Self = ObservableProperty<T, blocking_class, friend_class>;
+		using Self = ObservablePropertyConfigurable<T, blocking_class, friend_class, ObservablePropertyLock_mutex, EvenActionListLock, EventMutationListLock>;
 
 
 		using Settings = details::Settings<T, blocking_class>;
-		using BaseLock = details::ObservablePropertyLock< typename Settings::Lock >;
+		using BaseLock = details::ObservablePropertyLock< ObservablePropertyLock_mutex >;
 
 	public:
 		using blocking_mode = typename Settings::blocking_mode;
+		static constexpr const bool threadsafe =
+			!(
+				std::is_same<ObservablePropertyLock_mutex, threading::dummy_mutex>::value
+				&& std::is_same<EvenActionListLock, threading::dummy_mutex>::value
+				&& std::is_same<EventMutationListLock, threading::dummy_mutex>::value
+			);
 	protected:
 		static const constexpr bool do_blocking = Settings::do_blocking;
 		static const constexpr bool atomic_value = Settings::atomic_value;
-		using Lock = typename Settings::Lock;
+		using Lock = ObservablePropertyLock_mutex;
 
 		using BaseLock::m_lock;
 
@@ -87,17 +97,17 @@ namespace details {
 	protected:
 		// variables order matters (for smaller object size)
 		std::conditional_t<atomic_value, std::atomic<T>, T> value;
-		mutable Event<const T&> event;
+		mutable ConfigurableEvent<EvenActionListLock, EventMutationListLock, const T&> event;
 
 	public:
-		ObservableProperty() {}
+		ObservablePropertyConfigurable() {}
 
 		// in place construction
 		template<
 			class Arg, class ...Args
 			, class = typename std::enable_if_t< !atomic_value && !std::is_same< std::decay_t<Arg>, Self >::value >
 		>
-		ObservableProperty(Arg&& arg, Args&&...args)
+		ObservablePropertyConfigurable(Arg&& arg, Args&&...args)
 			: value( std::forward<Arg>(arg), std::forward<Args>(args)... ) {};
 
 		// for atomic
@@ -106,22 +116,22 @@ namespace details {
 			, class = typename std::enable_if_t< atomic_value && !std::is_same< std::decay_t<Arg>, Self >::value >
 			, typename = void
 		>
-		ObservableProperty(Arg&& arg, Args&&...args)
+		ObservablePropertyConfigurable(Arg&& arg, Args&&...args)
 			: value( T(std::forward<Arg>(arg), std::forward<Args>(args)...) ) {};
 
 
 		// do not copy event list
-		ObservableProperty(const ObservableProperty& other)
+		ObservablePropertyConfigurable(const ObservablePropertyConfigurable& other)
 			:value(other.getCopy()) {}
-		ObservableProperty& operator=(const ObservableProperty& other) {
+		ObservablePropertyConfigurable& operator=(const ObservablePropertyConfigurable& other) {
 			set_value(other.getCopy());
 			return *this;
 		}
 
 		// move all (event list too)
 		// non thread safe
-		ObservableProperty(ObservableProperty&&) = default;
-		ObservableProperty& operator=(ObservableProperty&&) = default;
+		ObservablePropertyConfigurable(ObservablePropertyConfigurable&&) = default;
+		ObservablePropertyConfigurable& operator=(ObservablePropertyConfigurable&&) = default;
 
 		// event control (non-blocking)
 		template<class DelegateT>
@@ -177,8 +187,8 @@ namespace details {
 			const bool need_event = need_trigger_event(any, this->value);
 
 			//lock.lock();
-			this->value = std::forward<Any>(any);
-				const T temp_value = this->value;
+				const T temp_value = any;
+				this->value = std::forward<Any>(any);	// potential atomic store
 			lock.unlock();
 
 			if (!need_event) return;
@@ -462,6 +472,8 @@ namespace details {
 
 	};
 
+	template<class T, class blocking_class = reactive::default_blocking, class friend_class = std::true_type>
+	using ObservableProperty = ObservablePropertyConfigurable<T, blocking_class, friend_class>;
 }
 }
 

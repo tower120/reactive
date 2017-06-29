@@ -4,7 +4,11 @@ Concsists from:
 * [ObservableProperty](#observableproperty)
 * [ReactiveProperty](#reactiveproperty)
 
-Helpers [observe](#observe) and [bind](#bind)
+Helpers [observe](#observe) and [bind](#bind).
+
+There is also [non thread safe version](#non_thread_safe). And you can mix them safely.
+
+Througthput. 400'000 reactive updates took 60ms on my Intel i7. Should be more than enough to build your UI model/view interaction. See `test/BenchmarkReactivity.h` to know your mileage.
 
 # Usage
 Add `src` folder to your compiler's INCLUDE path.
@@ -373,10 +377,10 @@ template<class blocking_mode = default_blocking, class Closure, class ...Observa
 auto observe(Closure&&, Observables&...)
 ```
 
-If blocking_mode == blocking, closure called with observables.lock()... If someone of observables dies, `observe` auto-unsubscribes.    
-Otherwise, values stored in local tuple, and each time observables changes, tuple updates. Closure called with copy of that tuple. Thus, ommiting potential mutex lock on observables.lock()... If someone of observables dies, closure will be called with last known value of dead observable. Thus, it stop listen only when all observables dies.
+* If blocking_mode == blocking, closure called with observables.lock()... If someone of observables dies, `observe` auto-unsubscribes.    
+* Otherwise, values stored in local tuple, and each time observables changes, tuple updates. Closure called with copy of that tuple. Thus, ommiting potential mutex lock on observables.lock()... If someone of observables dies, closure will be called with last known value of dead observable. Thus, it stop listen only when all observables dies.
 
-Rules for default_blocking same as in [ObservableProperty](#observableproperty).
+`default_blocking` will try to use non-blocking mode when possible.
 
 
 # Bind
@@ -437,6 +441,44 @@ template<class blocking_mode = default_blocking, class Obj, class Closure, class
 auto bind_w_unsubscribe(const std::shared_ptr<Obj>& obj, Closure&& closure, const Observables&... observables)
 // return unsubscriber
 ```
+
+# non_thread_safe
+
+Non thread safe version lies in reactive/non_thread_safe namespace and folder.
+The only difference, apart being not thread safe, is existance of `operator->()` and `operator*()`, which allow value access without `lock()`/`getCopy()`
+
+You can mix thread-safe with non-thread-safe version:
+
+```C++
+#include <reactive/ObservableProperty>
+#include <reactive/non_thread_safe/ObservableProperty>
+#include <reactive/ReactiveProperty>
+
+using namespace reactive;
+
+ObservableProperty<int> i1{1};
+
+
+struct MyWidget{    
+    non_thread_safe::ObservableProperty<int> i2{2};
+
+    vodi show(){
+        std::cout << *i2 << std::endl;  // operator*() exists in non_thread_safe version
+    }
+};
+MyWidget widget;
+
+ReactiveProperty<int> sum;
+
+// nonblocking stores copy of values when their event triggers, 
+// thus it is safe to mix threaded and non-threaded properties in this mode (value must be copyable)
+// and only in nonblocking mode
+sum.set<nonblocking>([&](int i1, int i2){   // you may ommit <nonblocking>, it will be set by default for this case
+    return i1 + i2;
+}, i1, i2);
+```
+
+See `test/BenchmarkReactivity.h` for performance comparsion. Huge (10-20 times) difference in gcc 6.3 compiled version, and almost the same speed in all versions under VS2017.
 
 
 ----

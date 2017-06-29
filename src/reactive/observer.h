@@ -61,11 +61,17 @@ namespace reactive{
 
 
             template<typename ... V>
-            static bool and_all(const V &... v) {
+            static constexpr bool and_all(const V &... v) {
                 bool result = true;
                 (void) std::initializer_list<int>{(result = result && v, 0)...};
                 return result;
             }
+			template<typename ... V>
+			static constexpr bool or_all(const V &... v) {
+				bool result = false;
+				(void)std::initializer_list<int>{(result = result || v, 0)...};
+				return result;
+			}
 
 
             template<class Closure, class ...Observables>
@@ -175,11 +181,11 @@ namespace reactive{
 
             private:
                 template<class ClosureT, class TmpValues>
-                void apply_closure(ClosureT&& closure, TmpValues& tmp_observable_values, std::false_type){
+                void apply_closure(ClosureT&& closure, const TmpValues& tmp_observable_values, std::false_type){
                     apply(std::forward<ClosureT>(closure), tmp_observable_values);
                 }
                 template<class ClosureT, class TmpValues>
-                void apply_closure(ClosureT&& closure, TmpValues& tmp_observable_values, std::true_type){
+                void apply_closure(ClosureT&& closure, const TmpValues& tmp_observable_values, std::true_type){
                     apply(
                         [&](auto&&...args){
                             closure( [&](){ this->unsubscribe(); },  std::forward<decltype(args)>(args)... );
@@ -196,7 +202,7 @@ namespace reactive{
                     lock.lock();
                         auto &value = std::get<IntegralConstant::value>(observable_values);
                         value = std::forward<Arg>(arg);
-                        auto tmp_observable_values = observable_values;
+						const auto tmp_observable_values = observable_values;
                     lock.unlock();
 
                     apply_closure(closure, tmp_observable_values, std::integral_constant<bool, add_unsubscibe_self>{});
@@ -209,7 +215,7 @@ namespace reactive{
                 template<class ClosureT>
                 void execute(ClosureT&& closure){
                     lock.lock();
-                        auto tmp_observable_values = observable_values;
+                        const auto tmp_observable_values = observable_values;
                     lock.unlock();
 
                     apply_closure(std::forward<ClosureT>(closure), tmp_observable_values, std::integral_constant<bool, add_unsubscibe_self>{});
@@ -222,8 +228,30 @@ namespace reactive{
             auto observe_impl(Closure &&closure, const std::shared_ptr<Observables>&... observables) {
                 assert(and_all(observables...) && "all observables must exists on observe()!");
 
-                using m_blocking_mode = get_blocking_mode<blocking_mode, typename Observables::Value...>;
-                constexpr const bool do_blocking = std::is_same<m_blocking_mode, blocking>::value;
+				// mix_threadsafe only safe to work in nonblocking mode
+				constexpr const bool all_non_threadsafe	 = and_all(!Observables::threadsafe...);
+				constexpr const bool some_non_threadsafe = or_all (!Observables::threadsafe...);
+				constexpr const bool mix_threadsafe = some_non_threadsafe && !all_non_threadsafe;
+
+				constexpr const bool efficiently_copyable = reactive::details::default_blocking::is_efficiently_copyable<typename Observables::Value...>::value;
+
+				static_assert(!(mix_threadsafe && std::is_same<blocking_mode, reactive::blocking>::value)
+					, "You trying to mix thread-safe with non-thread-safe properties in observer in blocking mode. Use default_blocking or nonblocking observer mode.");
+
+
+				// If someone in blocking mode - play safe, work in blocking mode too
+				constexpr const bool have_property_in_blocking_mode = or_all( std::is_same<typename Observables::blocking_mode, reactive::blocking>::value... );
+
+
+				constexpr const bool is_default_blocking = std::is_same<blocking_mode, reactive::default_blocking>::value;
+
+				constexpr const bool do_blocking = 
+					( is_default_blocking
+						? (mix_threadsafe ? false /* required */ : 
+							(all_non_threadsafe && efficiently_copyable /* nonthread properties always in blocking mode */ ? false : have_property_in_blocking_mode)
+						   )
+						: std::is_same<blocking_mode, blocking>::value
+					);
 
                 using Observer = std::conditional_t<
                         do_blocking
@@ -234,7 +262,6 @@ namespace reactive{
                 std::shared_ptr<Observer> observer = std::make_shared<Observer>(
                         std::forward<Closure>(closure), observables...
                 );
-                //const auto *tag = observer.get();
 
                 foreach([&](auto i, auto &observable) {
                     using I = decltype(i);

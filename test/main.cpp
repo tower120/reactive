@@ -11,19 +11,26 @@
 
 
 #include "BenchmarkOwnedProperty.h"
+#include "BenchmarkReactivity.h"
+#include "BenchmarkDeferredContainer.h"
 
 
 int main() {
-    TestEvent().test_all();
-    TestObservableProperty().test_all();
-	TestMultiObserver().test_all();
-	TestReactiveProperty().test_all();
-
+	
+    //TestEvent().test_all();
+    //TestObservableProperty().test_all();
+	//TestMultiObserver().test_all();
+	//TestReactiveProperty().test_all();
+	/*
     TestBindableProperty().test_all();
 
 
-
+	
 	BenchmarkOwnedProperty().benchmark_all();
+	*/
+	//BenchmarkDeferredContainer().benchmark_all();
 
+	BenchmarkReactivity().benchmark_all();
+	
     return 0;
 }
