@@ -6,11 +6,19 @@
 
 namespace reactive{
 
-    template<class T, class blocking_class = reactive::default_blocking >
-    class ReactiveProperty{
-        using Self = ReactiveProperty<T, blocking_class>;
+	class ReactivePropertyBase {};
 
-		using DataBase = details::ObservableProperty<T, blocking_class, Self>;
+    template<class T, class blocking_class = reactive::default_blocking, bool t_threadsafe = true >
+    class ReactiveProperty : ReactivePropertyBase {
+	public:
+		static constexpr const bool threadsafe = t_threadsafe;
+	private:
+        using Self = ReactiveProperty<T, blocking_class, threadsafe>;
+
+		using DataBase = 
+			std::conditional_t<threadsafe
+				, details::ObservableProperty<T, blocking_class, Self>
+			>;
 
 		struct DataNoLock {
 			using Lock = typename DataBase::Lock;
@@ -22,7 +30,18 @@ namespace reactive{
 			static constexpr const bool base_have_lock = false;
 		};
 
-		using DataLock = std::conditional_t< std::is_same<typename DataBase::Lock, threading::dummy_mutex>::value, DataHaveLock, DataNoLock >;
+
+
+		using DataLock = std::conditional_t<
+			!threadsafe
+			,DataNoLock		/* use threading::dummy_mutex from ObservablePropertyConfigurable */
+			,std::conditional_t<
+				std::is_same<typename DataBase::Lock, threading::dummy_mutex>::value
+				, DataHaveLock
+				, DataNoLock 
+			>
+		>;
+
 
         struct Data 
 			: public DataBase
@@ -33,6 +52,7 @@ namespace reactive{
             using Base::Base;
 			using typename DataLock::Lock;
 			using Base::set_value;
+			using Base::threadsafe;
 
 			auto& get_mutex(std::true_type base_have_lock) {
 				return Base::m_lock;
@@ -41,7 +61,7 @@ namespace reactive{
 				return DataLock::reactiveproperty_lock;
 			}
 			auto& get_mutex() {
-				return get_mutex(std::integral_constant<bool, DataLock::base_have_lock>());
+				return get_mutex(std::integral_constant<bool, DataLock::base_have_lock>{});
 			}
 
             std::function<void()> unsubscriber;
@@ -54,7 +74,7 @@ namespace reactive{
         using SharedPtr = std::shared_ptr<Data>;
         using ReadLock  = typename Data::ReadLock;
         using WriteLock = typename Data::WriteLock;
-		using blocking_mode = typename DataBase::blocking_mode;
+		//using blocking_mode = typename DataBase::blocking_mode;
 
 
         ReactiveProperty()
@@ -89,10 +109,13 @@ namespace reactive{
                 || std::is_same< std::decay_t<Arg>, WeakPtr >::value
 				|| std::is_same< std::decay_t<Arg>, SharedPtr >::value
 
-                || std::is_same< std::decay_t<Arg>, ObservableProperty<T, reactive::default_blocking> >::value
+				|| std::is_base_of<ObservablePropertyBase, std::decay_t<Arg>>::value
+				|| std::is_base_of<ReactivePropertyBase, std::decay_t<Arg>>::value
+
+                /*|| std::is_same< std::decay_t<Arg>, ObservableProperty<T, reactive::default_blocking> >::value
                 || std::is_same< std::decay_t<Arg>, ObservableProperty<T, reactive::nonblocking> >::value
 				|| std::is_same< std::decay_t<Arg>, ObservableProperty<T, reactive::nonblocking_atomic> >::value
-                || std::is_same< std::decay_t<Arg>, ObservableProperty<T, reactive::blocking> >::value
+                || std::is_same< std::decay_t<Arg>, ObservableProperty<T, reactive::blocking> >::value*/
                 )
             >
         >
@@ -134,11 +157,15 @@ namespace reactive{
         }
 
 
-        ReactiveProperty(ReactiveProperty&&) = default;
-        ReactiveProperty& operator=(ReactiveProperty&&) = default;
+		ReactiveProperty(ReactiveProperty&& other) noexcept
+			:ptr(std::move(other.ptr)) {}
+		ReactiveProperty& operator=(ReactiveProperty&& other) noexcept {
+			ptr = std::move(other.ptr);
+			return *this;
+		}
 
     private:
-        template<bool update_value = true, class set_blocking_mode = blocking_mode, class Closure, class ...Observables>
+        template<bool update_value = true, class set_blocking_mode = reactive::default_blocking, class Closure, class ...Observables>
         void set_impl(Closure&& closure, const Observables&... observables){
             std::unique_lock<typename DataLock::Lock> l(ptr->get_mutex());
 
@@ -163,13 +190,13 @@ namespace reactive{
             }
         }
     public:
-        template<class set_blocking_mode = blocking_mode, class Closure, class ...Observables>
+        template<class set_blocking_mode = reactive::default_blocking, class Closure, class ...Observables>
         void set(Closure&& closure, const Observables&... observables){
             set_impl<true, set_blocking_mode>(std::forward<Closure>(closure), observables...);
         }
 
 
-        template<class update_blocking_mode = blocking_mode, class Closure, class ...Observables>
+        template<class update_blocking_mode = reactive::default_blocking, class Closure, class ...Observables>
         void update(Closure&& closure, const Observables&... observables){
             std::unique_lock<typename DataLock::Lock> l(ptr->get_mutex());
 
@@ -254,11 +281,23 @@ namespace reactive{
             return ptr->getCopy();
         }
 
+		template<bool m_threadsafe = threadsafe, typename = std::enable_if_t<!m_threadsafe> >
+		const T* operator->() const {
+			return &(ptr->value);
+		}
+		template<bool m_threadsafe = threadsafe, typename = std::enable_if_t<!m_threadsafe> >
+		const T& operator*() const {
+			return ptr->value;
+		}
+
+
         void pulse() const{
             ptr->pulse();
         }
 
-        ~ReactiveProperty(){
+        ~ReactiveProperty(){			
+			if (!ptr) return; // moved?
+
             std::unique_lock<typename DataLock::Lock> l(ptr->get_mutex());
             if (ptr->unsubscriber){
                 ptr->unsubscriber();

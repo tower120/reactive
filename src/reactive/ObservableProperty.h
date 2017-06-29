@@ -5,12 +5,20 @@
 
 namespace reactive{
 
-    // just wraps details::ObservableProperty with shared_ptr
-    template<class T, class blocking_class = default_blocking>
-    class ObservableProperty{
-        using Self = ObservableProperty<T, blocking_class>;
+	class ObservablePropertyBase {};
 
-        using Property = details::ObservableProperty<T, blocking_class, Self>;
+    // just wraps details::ObservableProperty with shared_ptr
+    template<class T, class blocking_class = default_blocking, bool t_threadsafe = true>
+    class ObservableProperty : ObservablePropertyBase {
+	public:
+		static constexpr const bool threadsafe = t_threadsafe;
+	private:
+        using Self = ObservableProperty<T, blocking_class, threadsafe>;
+
+        using Property = std::conditional_t<threadsafe
+			, details::ObservableProperty<T, blocking_class, Self>
+			, details::ObservablePropertyConfigurable<T, blocking, Self, threading::dummy_mutex, threading::dummy_mutex, threading::dummy_mutex>
+		>;
         std::shared_ptr<Property> ptr;
     public:
 		using Value = T;
@@ -19,7 +27,7 @@ namespace reactive{
         using ReadLock  = typename Property::ReadLock;
         using WriteLock = typename Property::WriteLock;
 
-		using blocking_mode = typename Property::blocking_mode;
+		//using blocking_mode = typename Property::blocking_mode;
 
         ObservableProperty()
             : ptr(std::make_shared<Property>()){};
@@ -92,6 +100,15 @@ namespace reactive{
         void operator=(T&& value) {
             ptr->operator=(std::move(value));
         }
+
+		template<bool m_threadsafe = threadsafe, typename = std::enable_if_t<!m_threadsafe> >
+		const T* operator->() const {
+			return &(ptr->value);
+		}
+		template<bool m_threadsafe = threadsafe, typename = std::enable_if_t<!m_threadsafe> >
+		const T& operator*() const {
+			return ptr->value;
+		}
 
         ReadLock lock() const {
             return ptr->lock();

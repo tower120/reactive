@@ -170,6 +170,21 @@ public:
         std::cout << sizeof(Test) << std::endl;
     }
 
+	void test_nontreadsafe() {
+		struct Vec2 {
+			int x, y;
+		};
+		reactive::ObservableProperty<Vec2, reactive::default_blocking, false> vec2;
+		{
+			auto vec2_ptr = vec2.write_lock();
+			vec2_ptr->x = 1;
+			vec2_ptr->y = 2;
+		}
+
+
+		std::cout << vec2->x << std::endl;		
+	}
+
     void test_all(){
         //test_simple();
 		//test_unsubscribe();
@@ -177,7 +192,9 @@ public:
         //test_read_lock();
         //test_write_lock();
         //test_copy();
-        test_silent();
+        //test_silent();
+
+		test_nontreadsafe();
 
         //test_size();
     }

@@ -59,9 +59,16 @@ public:
         //x.pulse();
     }
 
+	void test_nonthreadsafe() {
+		reactive::ReactiveProperty<std::pair<int, int>, reactive::blocking, false> vec2 = { 10, 20 };
+        vec2->first;
+	}
+
     void test_all(){
         //test_simple();
-        test_update();
+        //test_update();
+
+		test_nonthreadsafe();
     }
 };
 

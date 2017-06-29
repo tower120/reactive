@@ -33,7 +33,7 @@ namespace reactive {
 			// need this just to fix VS2017 v_141 compiler bug
 			// #https://developercommunity.visualstudio.com/content/problem/69543/vs2017-v-141-parameter-pack-expansion-compilation.html
 			template<class ...Ts>
-			struct is_nonblocking {
+			struct is_efficiently_copyable {
 				static constexpr const bool value =
 					and_all(std::is_copy_constructible<Ts>::value...) && and_plus(sizeof(Ts)...) <= 128;
 			};
@@ -58,7 +58,7 @@ namespace reactive {
 	 */
 	template<class ...Ts>
 	using get_default_blocking = std::conditional_t<
-			details::default_blocking::is_nonblocking<Ts...>::value
+			details::default_blocking::is_efficiently_copyable<Ts...>::value
 			, std::conditional_t<
 				details::default_blocking::is_atomic<Ts...>::value
 				, nonblocking_atomic
