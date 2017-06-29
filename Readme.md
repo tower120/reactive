@@ -8,6 +8,7 @@ Helpers [observe](#observe) and [bind](#bind).
 
 There is also [non thread safe version](#non_thread_safe). And you can mix them safely.
 
+Througthput. 400'000 reactive updates took 60ms on my Intel i7. Should be more than enough to build your UI model/view interaction. See `test/BenchmarkReactivity.h` to know your mileage.
 
 # Usage
 Add `src` folder to your compiler's INCLUDE path.
