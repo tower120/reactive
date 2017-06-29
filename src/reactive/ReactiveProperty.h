@@ -18,6 +18,7 @@ namespace reactive{
 		using DataBase = 
 			std::conditional_t<threadsafe
 				, details::ObservableProperty<T, blocking_class, Self>
+				, details::ObservablePropertyConfigurable<T, blocking_class, Self, threading::dummy_mutex, threading::dummy_mutex, threading::dummy_mutex>
 			>;
 
 		struct DataNoLock {
