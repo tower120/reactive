@@ -13,20 +13,20 @@ namespace threading {
 
 		// not in use
 		void adaptive_lock_v1() {
-			if (spinLock.test_and_set(std::memory_order_acquire)) {
+			if (!spinLock.test_and_set(std::memory_order_acquire)) {
 				// fast return
 				return;
 			}
 
 			for (int i = 0;i < 100;i++) {
-				if (spinLock.test_and_set(std::memory_order_acquire)) {
+				if (!spinLock.test_and_set(std::memory_order_acquire)) {
 					return;
 				}
 				std::this_thread::yield();
 			}
 
 			while (true) {
-				if (spinLock.test_and_set(std::memory_order_acquire)) {
+				if (!spinLock.test_and_set(std::memory_order_acquire)) {
 					return;
 				}
 
@@ -36,14 +36,14 @@ namespace threading {
 		}
 
 		void adaptive_lock() {
-			if (spinLock.test_and_set(std::memory_order_acquire)) {
+			if (!spinLock.test_and_set(std::memory_order_acquire)) {
 				// fast return
 				return;
 			}
 
 			while (true) {
 				for (int i = 0; i < 100; i++) {
-					if (spinLock.test_and_set(std::memory_order_acquire)) {
+					if (!spinLock.test_and_set(std::memory_order_acquire)) {
 						return;
 					}
 					std::this_thread::yield();
@@ -66,7 +66,7 @@ namespace threading {
 			}
 
 			while (true) {
-				if (spinLock.test_and_set(std::memory_order_acquire)) {
+				if (!spinLock.test_and_set(std::memory_order_acquire)) {
 					return;
 				}
 
