@@ -44,7 +44,7 @@ namespace reactive{
 
             template<class Closure, class Tuple>
             static void foreach_tuple(Closure &&closure, Tuple &&tuple) {
-                apply([&](auto &&... args) {
+                reactive::details::MultiObserver::apply([&](auto &&... args) {
                     foreach(closure, std::forward<decltype(args)>(args)...);
                 }, tuple);
             }
@@ -131,13 +131,13 @@ namespace reactive{
             private:
                 template<class ClosureT, class ObservableLocks>
                 void apply_closure(ClosureT&& closure, ObservableLocks& observable_locks, std::false_type){
-                    apply([&](auto &... locks) {
+                    reactive::details::MultiObserver::apply([&](auto &... locks) {
                         closure(locks.get()...);
                     }, observable_locks);
                 }
                 template<class ClosureT, class ObservableLocks>
                 void apply_closure(ClosureT&& closure, ObservableLocks& observable_locks, std::true_type){
-                    apply([&](auto &... locks) {
+                    reactive::details::MultiObserver::apply([&](auto &... locks) {
                         closure([&](){ unsubscribe(); }, locks.get()...);
                     }, observable_locks);
                 }
@@ -145,7 +145,7 @@ namespace reactive{
                 template<class ClosureT>
                 void execute(ClosureT&& closure){
                     auto shared_ptrs = lockWeakPtrs(observable_weak_ptrs);
-                    const bool all_locked = apply([](auto &... ptrs) { return and_all(ptrs...); }, shared_ptrs);
+                    const bool all_locked = reactive::details::MultiObserver::apply([](auto &... ptrs) { return and_all(ptrs...); }, shared_ptrs);
 
                     if (!all_locked) {
                         // can't be reactive further, unsubscribe
@@ -153,7 +153,7 @@ namespace reactive{
                         return;
                     }
 
-                    auto observable_locks = apply([](auto &... observables) {
+                    auto observable_locks = reactive::details::MultiObserver::apply([](auto &... observables) {
                         return std::make_tuple(observables->lock()...);
                     }, shared_ptrs);
 
@@ -182,11 +182,11 @@ namespace reactive{
             private:
                 template<class ClosureT, class TmpValues>
                 void apply_closure(ClosureT&& closure, const TmpValues& tmp_observable_values, std::false_type){
-                    apply(std::forward<ClosureT>(closure), tmp_observable_values);
+                    reactive::details::MultiObserver::apply(std::forward<ClosureT>(closure), tmp_observable_values);
                 }
                 template<class ClosureT, class TmpValues>
                 void apply_closure(ClosureT&& closure, const TmpValues& tmp_observable_values, std::true_type){
-                    apply(
+                    reactive::details::MultiObserver::apply(
                         [&](auto&&...args){
                             closure( [&](){ this->unsubscribe(); },  std::forward<decltype(args)>(args)... );
                         }
