@@ -79,7 +79,7 @@ namespace reactive{
             protected:
                 bool unsubscribed = false;
 
-                using Lock = threading::SpinLock<threading::SpinLockMode::Adpative>;
+                using Lock = threading::SpinLock<threading::SpinLockMode::Adaptive>;
                 Lock lock;
             public:
                 using ObservablesTuple = std::tuple<std::weak_ptr<Observables>...>;

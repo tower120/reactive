@@ -26,7 +26,7 @@ namespace reactive{
 			static constexpr const bool base_have_lock = true;
 		};
 		struct DataHaveLock {
-			using Lock = threading::SpinLock<threading::SpinLockMode::Adpative>;
+			using Lock = threading::SpinLock<threading::SpinLockMode::Adaptive>;
 		 	Lock reactiveproperty_lock;
 			static constexpr const bool base_have_lock = false;
 		};

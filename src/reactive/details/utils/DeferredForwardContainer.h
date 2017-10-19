@@ -46,7 +46,7 @@ namespace utils {
 	template< 
 		class T, 
 		class DeferredActionValue = T,
-		class ActionListLock	= threading::SpinLock<threading::SpinLockMode::Adpative> /*std::mutex*/, 
+		class ActionListLock	= threading::SpinLock<threading::SpinLockMode::Adaptive> /*std::mutex*/,
 		class ListMutationLock	= std::shared_mutex,
 		bool unordered = true
 	>
