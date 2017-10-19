@@ -6,8 +6,10 @@
 #include <mutex>
 #include <tuple>
 #include <utility>
+#include <cassert>
 
 #include "details/threading/SpinLock.h"
+#include "details/Delegate.h"
 
 #include "blocking.h"
 
