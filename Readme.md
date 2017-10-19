@@ -14,9 +14,9 @@ Througthput. 400'000 reactive updates took 60ms on my Intel i7. Should be more t
 Add `src` folder to your compiler's INCLUDE path.
 
 ```C++
-#include <reactive/ObservableProperty>
-#include <reactive/ReactiveProperty>
-#include <reactive/bind>
+#include <reactive/ObservableProperty.h>
+#include <reactive/ReactiveProperty.h>
+#include <reactive/bind.h>
 
 using namespace reactive;
 
@@ -427,7 +427,8 @@ len = 101;
 len = 60;
 ```
 
-Stores object's weak_ptr, listen for observables. If object dies, unsubscribe self.
+`bind` Stores object's weak_ptr, listen for observables. If object dies, unsubscribe self.  
+`bind_w_unsubscribe` do the same - but you can manually unsubscribe.
 
 #### Synopsis
 ```C++
