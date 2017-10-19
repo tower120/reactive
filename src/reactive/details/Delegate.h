@@ -19,7 +19,7 @@ namespace reactive {
 		unsigned long long tag;
 
 	protected:
-		DelegateTag(nullptr_t)
+		DelegateTag(std::nullptr_t)
 			:tag(0)
 		{}
 	public:
