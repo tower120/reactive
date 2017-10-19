@@ -19,7 +19,7 @@ namespace details {
 	// thread-safe, non-blocking
 	// subscribe/unsubscribe may be deffered to next () call
 	template<
-		class ActionListLock /*= threading::SpinLock<threading::SpinLockMode::Adpative>*/,
+		class ActionListLock /*= threading::SpinLock<threading::SpinLockMode::Adaptive>*/,
 		class ListMutationLock /*= std::shared_mutex*/,
 		class ...Args>
 	class ConfigurableEventBase {
@@ -70,7 +70,7 @@ namespace details {
 
 
 	template<
-		class ActionListLock /*= threading::SpinLock<threading::SpinLockMode::Adpative>*/,
+		class ActionListLock /*= threading::SpinLock<threading::SpinLockMode::Adaptive>*/,
 		class ListMutationLock /*= std::shared_mutex*/,
 		class ...Args>
 	using ConfigurableEvent = ConfigurableEventBase<ActionListLock, ListMutationLock, Args...>;
