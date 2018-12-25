@@ -29,14 +29,11 @@ namespace utils {
 		template<>
 		class DeferredForwardContainerBase<threading::dummy_mutex, threading::dummy_mutex> {
 		protected:
-			static threading::dummy_mutex action_list_lock;
-			static threading::dummy_mutex list_mutation_lock;
+			inline static threading::dummy_mutex action_list_lock;
+			inline static threading::dummy_mutex list_mutation_lock;
 		public:
 			DeferredForwardContainerBase() {};
 		};
-
-		threading::dummy_mutex DeferredForwardContainerBase<threading::dummy_mutex, threading::dummy_mutex>::action_list_lock = threading::dummy_mutex{};
-		threading::dummy_mutex DeferredForwardContainerBase<threading::dummy_mutex, threading::dummy_mutex>::list_mutation_lock = threading::dummy_mutex{};
 	}
 
 	// thread safe	(use threading::dummy_mutex to disable)

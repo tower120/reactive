@@ -45,9 +45,8 @@ namespace details {
 		template<>
 		class ObservablePropertyLock<threading::dummy_mutex, void> {
 		protected:
-			static threading::dummy_mutex m_lock;
+			inline static threading::dummy_mutex m_lock;
 		};
-		threading::dummy_mutex ObservablePropertyLock<threading::dummy_mutex, void>::m_lock = threading::dummy_mutex{};
 
 		template<class Lock>
 		class ObservablePropertyLock<Lock, void> {
